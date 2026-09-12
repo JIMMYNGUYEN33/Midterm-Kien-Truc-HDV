@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Tra cứu học phí</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">TDTU iBanking</div>
+        <div class="user-info">
+            Xin chào, <span id="nav-user-name"></span> 
+            | <a href="history.html">Lịch sử</a>
+            | <a href="login.html">Đăng xuất</a>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <div class="banking-card">
+            <h2>Tra Cứu Học Phí</h2>
+            
+            <div class="form-group">
+                <input type="text" id="mssvSearch" class="form-control" placeholder="Nhập MSSV cần nộp...">
+            </div>
+            <button onclick="lookupTuition()" class="btn-primary" style="margin-bottom: 20px;">Tìm kiếm</button>
+
+            <div id="not-found-msg" class="alert alert-error">Không tìm thấy SV hoặc SV đã đóng đủ</div>
+
+            <div id="tuition-info" style="display: none;">
+                <h3 style="margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid var(--primary-blue); padding-bottom: 5px;">Thông tin khoản nộp</h3>
+                
+                <div class="form-group">
+                    <label>Người nộp tiền (Lấy từ session)</label>
+                    <input type="text" id="payerName" class="form-control" disabled> 
+                </div>
+
+                <div class="detail-row">
+                    <span class="label">Mã số sinh viên:</span>
+                    <span class="value" id="res-mssv"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Tên sinh viên:</span>
+                    <span class="value" id="studentName"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Học kỳ:</span>
+                    <span class="value" id="hocKy"></span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Số tiền phải nộp:</span>
+                    <span class="value" style="color: var(--error-red); font-size: 18px;"><span id="amount"></span> VNĐ</span>
+                </div>
+                
+                <button onclick="goToPayment()" class="btn-primary" style="margin-top: 20px;">Xác nhận nộp học phí</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('nav-user-name').innerText = sessionStorage.getItem('HoTenNguoiNop');
+
+        document.getElementById('mssvSearch').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') lookupTuition();
+        });
+
+        async function lookupTuition() {
+            const mssv = document.getElementById('mssvSearch').value;
+            const notFoundMsg = document.getElementById('not-found-msg');
+            const tuitionInfo = document.getElementById('tuition-info');
+
+            try {
+                const res = await fetch(`http://localhost:3000/api/v1/tuitions/${mssv}`);
+                if (res.status === 404) {
+                    tuitionInfo.style.display = 'none';
+                    notFoundMsg.style.display = 'block';
+                    return;
+                }
+
+                const data = await res.json();
+                notFoundMsg.style.display = 'none';
+                tuitionInfo.style.display = 'block';
+
+                document.getElementById('payerName').value = sessionStorage.getItem('HoTenNguoiNop');
+                document.getElementById('res-mssv').innerText = data.MSSV;
+                document.getElementById('studentName').innerText = data.HoTen;
+                document.getElementById('hocKy').innerText = data.HocKy;
+                document.getElementById('amount').innerText = Number(data.SoTienPhaiNop).toLocaleString('vi-VN');
+
+                // Lưu session mang sang bước thanh toán
+                sessionStorage.setItem('pay_MaHocPhi', data.MaHocPhi);
+                sessionStorage.setItem('pay_MSSV', data.MSSV);
+                sessionStorage.setItem('pay_Amount', data.SoTienPhaiNop);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function goToPayment() {
+            window.location.href = 'payment.html';
+        }
+    </script>
+</body>
+</html>
